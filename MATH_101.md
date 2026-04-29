@@ -72,7 +72,7 @@ Here, `B(a,b)` comes from `lgamma` (Lanczos series), and `cf` is Lentz's continu
 
 We use bisection on `tCdf` over `[−10⁶, 10⁶]`, stopping at a width `< 10⁻⁹` (or 100 iterations, whichever comes first). It is slow but bulletproof and is called only once per CI.
 
-> **Example:** `tInv(0.975, 10) ≈ 2.228`; `tInv(0.975, 100) ≈ 1.984`; `tInv(0.975, df) → 1.95996` as `df → ∞`. Beyond `df ≈ 50` the difference from the z-value is below 2%.
+> **Example:** `tInv(0.975, 10) ≈ 2.228`; `tInv(0.975, 100) ≈ 1.984`; `tInv(0.975, df) → 1.95996` as `df → ∞`. Beyond `df ≈ 65` the difference from the z-value is below 2%.
 
 ---
 
@@ -287,10 +287,10 @@ Continuing the §4 churn example: you observed `p̂_A ≈ 0.080`, `p̂_B ≈ 0.0
 * `p₁q₁ + p₂q₂ = 0.0736 + 0.06682 ≈ 0.14042`
 
 $$
-n \approx \frac{\bigl(1.96\sqrt{0.14045} + 0.842\sqrt{0.14042}\bigr)^2}{(0.008)^2} \approx 17{,}227
+n \approx \frac{\bigl(1.96\sqrt{0.14045} + 0.842\sqrt{0.14042}\bigr)^2}{(0.008)^2} \approx 17{,}224
 $$
 
-Per group — meaning the original experiment (~1,200 + 1,250) was simply underpowered. Total `≈ 34,454`.
+Per group — meaning the original experiment (~1,200 + 1,250) was simply underpowered. Total `≈ 34,448`.
 
 ---
 
