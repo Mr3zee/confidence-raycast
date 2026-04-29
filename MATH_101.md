@@ -45,7 +45,7 @@ This gives us the critical values `z_{α/2}` (CIs) and `z_β` (power).
 
 ## 2. Student's t-Distribution
 
-Used by Welch's t-test for continuous metrics with unknown variance and unequal sample sizes.
+Used by Welch's t-test for continuous metrics with unknown, possibly unequal variances.
 
 ### 2.1 CDF — `tCdf(t, df)`
 
@@ -181,7 +181,7 @@ $$
 n = \frac{\bigl(z_{1-\alpha/2} + z_{1-\beta}\bigr)^{2}\,(s_A^2 + s_B^2)}{\Delta^{2}}
 $$
 
-This is the **z-approximation** to the t-based formula — fine for `n ≳ 30`. For very small expected `n` you'd iterate using `t_{1-α/2,\,ν(n)}`, but planning calculators almost universally stop at the z form.
+This is the **z-approximation** to the t-based formula — fine for `n ≳ 30` per group. For very small expected `n` you'd iterate using `t_{1-α/2,\,ν(n)}`, but planning calculators almost universally stop at the z form.
 
 ---
 
@@ -197,7 +197,7 @@ Unpooled: `SE ≈ 0.01036`, `MoE = 1.96·SE ≈ 0.0203`, `95% CI ≈ [−0.0403,
 
 So at α = 0.05 the result is right on the line (p just above 0.05; CI just contains 0). You'd want either a larger sample or to accept slightly lower confidence.
 
-Sample size to detect this same MDE (8% → 7.2%, two-sided, α=0.05, power=0.80):
+Sample size to detect a more conservative 10%-relative MDE (8% → 7.2%, two-sided, α=0.05, power=0.80):
 
 $$
 n \approx \frac{(1.96\sqrt{2\cdot 0.076\cdot 0.924} + 0.842\sqrt{0.0736 + 0.0668})^2}{(0.008)^2} \approx 17{,}800
