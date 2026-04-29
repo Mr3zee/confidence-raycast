@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/confidence-cli.iml" filepath="$PROJECT_DIR$/confidence-cli.iml" />
+      <module fileurl="file://$PROJECT_DIR$/confidence-raycast.iml" filepath="$PROJECT_DIR$/confidence-raycast.iml" />
     </modules>
   </component>
 </project>

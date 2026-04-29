@@ -1,6 +1,6 @@
 {
   "$schema": "https://www.raycast.com/schemas/extension.json",
-  "name": "confidence",
+  "name": "confidence-raycast",
   "title": "Confidence",
   "description": "Calculate confidence intervals and p-values for A/B tests",
   "icon": "extension-icon.png",
