@@ -34,8 +34,7 @@ function buildSections(md: string): Section[] {
   const planOne = extractSection(md, 6);
   const planTwo = extractSection(md, 7);
   const planMeans = extractSection(md, 8);
-  const example = extractSection(md, 9);
-  const assumptions = extractSection(md, 10);
+  const assumptions = extractSection(md, 9);
 
   return [
     {
@@ -93,13 +92,6 @@ function buildSections(md: string): Section[] {
       title: "Means",
       icon: Icon.Calendar,
       markdown: planMeans,
-    },
-    {
-      id: "worked-example",
-      group: "Reference",
-      title: "Example",
-      icon: Icon.LightBulb,
-      markdown: example,
     },
     {
       id: "assumptions",

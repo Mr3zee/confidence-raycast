@@ -560,7 +560,7 @@ ${sizeSection}
 ## Assumptions
 - α = ${alpha.toFixed(3)} (${twoSided ? "two-sided" : "one-sided"})
 - Power = ${power.toFixed(3)} (β = ${(1 - power).toFixed(3)})
-- z<sub>α</sub> = ${result.zAlpha.toFixed(4)}, z<sub>β</sub> = ${result.zBeta.toFixed(4)}
+- \`z_α\` = ${result.zAlpha.toFixed(4)}, \`z_β\` = ${result.zBeta.toFixed(4)}
 
 ## Inputs
 ${Object.entries(inputs)
