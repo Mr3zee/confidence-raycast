@@ -11,14 +11,16 @@ import FormulaReference from "./formula-reference";
 import {
   Result,
   SampleSizeResult,
+  oneProportionTest,
   sampleSizeMeans,
+  sampleSizeOneProportion,
   sampleSizeProportion,
   twoProportionTest,
   welchTTest,
 } from "./statistics";
 
 type Mode = "analyze" | "plan";
-type TestType = "proportion" | "means";
+type TestType = "oneProportion" | "proportion" | "means";
 type MdeType = "relative" | "absolute";
 
 export default function Command() {
@@ -47,7 +49,22 @@ export default function Command() {
         );
         let result: Result;
         let inputs: Record<string, string>;
-        if (testType === "proportion") {
+        if (testType === "oneProportion") {
+          const nullProportion = parsePercent(
+            values.nullProportion,
+            "Null proportion",
+          );
+          result = oneProportionTest({
+            successes: parseNumber(values.successes, "Successes"),
+            trials: parseNumber(values.trials, "Trials"),
+            nullProportion,
+            confidenceLevel,
+          });
+          inputs = {
+            "Observed successes / trials": `${values.successes} / ${values.trials}`,
+            "Null proportion (H₀)": `${values.nullProportion}%`,
+          };
+        } else if (testType === "proportion") {
           result = twoProportionTest({
             successesA: parseNumber(values.successesA, "Control successes"),
             trialsA: parseNumber(values.trialsA, "Control trials"),
@@ -92,7 +109,23 @@ export default function Command() {
 
         let result: SampleSizeResult;
         let inputs: Record<string, string>;
-        if (testType === "proportion") {
+        if (testType === "oneProportion") {
+          const baseline = parsePercent(values.baseline, "Null proportion");
+          const mde = parsePercent(values.mde, "MDE");
+          result = sampleSizeOneProportion({
+            baseline,
+            mde,
+            mdeType,
+            alpha,
+            power,
+            twoSided,
+          });
+          inputs = {
+            "Null proportion (H₀)": `${values.baseline}%`,
+            "Minimum detectable effect": `${values.mde}% (${mdeType})`,
+            "Alternative rate (target)": `${(result.p2! * 100).toFixed(3)}%`,
+          };
+        } else if (testType === "proportion") {
           const baseline = parsePercent(values.baseline, "Baseline");
           const mde = parsePercent(values.mde, "MDE");
           result = sampleSizeProportion({
@@ -153,7 +186,9 @@ export default function Command() {
           <Action.Push
             icon={Icon.Book}
             title="View Formula Reference"
-            target={<FormulaReference />}
+            target={
+              <FormulaReference initialMode={mode} initialTestType={testType} />
+            }
             shortcut={{ modifiers: ["cmd"], key: "r" }}
           />
         </ActionPanel>
@@ -178,6 +213,10 @@ export default function Command() {
         onChange={(v) => setTestType(v as TestType)}
       >
         <Form.Dropdown.Item
+          value="oneProportion"
+          title="One-Proportion (Single Rate vs Target)"
+        />
+        <Form.Dropdown.Item
           value="proportion"
           title="Two-Proportion (Conversion / Churn)"
         />
@@ -196,7 +235,28 @@ export default function Command() {
             defaultValue="95"
             info="Common values: 90, 95, 99"
           />
-          {testType === "proportion" ? (
+          {testType === "oneProportion" ? (
+            <>
+              <Form.Description text="Observed sample" />
+              <Form.TextField
+                id="successes"
+                title="Successes"
+                placeholder="e.g. 96"
+              />
+              <Form.TextField
+                id="trials"
+                title="Trials"
+                placeholder="e.g. 1200"
+              />
+              <Form.Separator />
+              <Form.TextField
+                id="nullProportion"
+                title="Null Proportion (%)"
+                placeholder="e.g. 8 for 8%"
+                info="Hypothesized rate to test the observed sample against."
+              />
+            </>
+          ) : testType === "proportion" ? (
             <>
               <Form.Description text="Control (A)" />
               <Form.TextField
@@ -274,12 +334,20 @@ export default function Command() {
             placeholder="e.g. 2000 — used to estimate test duration"
           />
           <Form.Separator />
-          {testType === "proportion" ? (
+          {testType === "oneProportion" || testType === "proportion" ? (
             <>
               <Form.TextField
                 id="baseline"
-                title="Baseline Rate (%)"
-                placeholder="e.g. 8 for 8% churn"
+                title={
+                  testType === "oneProportion"
+                    ? "Null Proportion (%)"
+                    : "Baseline Rate (%)"
+                }
+                placeholder={
+                  testType === "oneProportion"
+                    ? "e.g. 8 for 8% hypothesized rate"
+                    : "e.g. 8 for 8% churn"
+                }
               />
               <Form.Dropdown
                 id="mdeType"
@@ -289,7 +357,11 @@ export default function Command() {
               >
                 <Form.Dropdown.Item
                   value="relative"
-                  title="Relative (% of baseline)"
+                  title={
+                    testType === "oneProportion"
+                      ? "Relative (% of null)"
+                      : "Relative (% of baseline)"
+                  }
                 />
                 <Form.Dropdown.Item
                   value="absolute"
@@ -306,7 +378,7 @@ export default function Command() {
                 }
                 info={
                   mdeType === "relative"
-                    ? "Use a negative number for a reduction (e.g. churn going down)."
+                    ? "Use a negative number for a reduction."
                     : "Percentage points. Negative for a reduction."
                 }
               />
@@ -370,11 +442,12 @@ function AnalyzeResultView({
     ? `**Statistically significant** at α = ${result.alpha.toFixed(3)}`
     : `**Not significant** at α = ${result.alpha.toFixed(3)}`;
 
-  const isProportion = result.statisticName === "z";
+  const isProportion =
+    result.kind === "oneProportion" || result.kind === "twoProportion";
   const diffLine = isProportion
     ? `${fmtPct(result.diff)} (absolute)${
         result.diffRelative !== null
-          ? `, ${fmtPct(result.diffRelative)} (relative lift)`
+          ? `, ${fmtPct(result.diffRelative)} (relative)`
           : ""
       }`
     : `${fmt(result.diff)}${
@@ -387,10 +460,25 @@ function AnalyzeResultView({
     ? `[${fmtPct(result.ciLow)}, ${fmtPct(result.ciHigh)}]`
     : `[${fmt(result.ciLow)}, ${fmt(result.ciHigh)}]`;
 
-  const ratesSection =
-    result.rateA !== undefined && result.rateB !== undefined
-      ? `\n- Control rate: **${fmtPct(result.rateA)}**\n- Treatment rate: **${fmtPct(result.rateB)}**`
-      : "";
+  let effectSection: string;
+  if (result.kind === "oneProportion") {
+    const observed = result.rateA !== undefined ? fmtPct(result.rateA) : "—";
+    const hypothesized =
+      result.rateB !== undefined ? fmtPct(result.rateB) : "—";
+    effectSection = `## Effect
+- Observed rate (p̂): **${observed}**
+- ${ciLabel} for rate: **${ciLine}**
+- Hypothesized rate (p₀): **${hypothesized}**
+- Deviation (observed − hypothesized): **${diffLine}**`;
+  } else {
+    const ratesSection =
+      result.rateA !== undefined && result.rateB !== undefined
+        ? `\n- Control rate: **${fmtPct(result.rateA)}**\n- Treatment rate: **${fmtPct(result.rateB)}**`
+        : "";
+    effectSection = `## Effect
+- Difference (B − A): **${diffLine}**
+- ${ciLabel}: **${ciLine}**${ratesSection}`;
+  }
 
   const dfLine =
     result.df !== undefined
@@ -401,9 +489,7 @@ function AnalyzeResultView({
 
 ${verdict}
 
-## Effect
-- Difference (B − A): **${diffLine}**
-- ${ciLabel}: **${ciLine}**${ratesSection}
+${effectSection}
 
 ## Test
 - p-value: **${fmtP(result.pValue)}**
@@ -454,17 +540,22 @@ function PlanResultView({
   inputs: Record<string, string>;
   dailyUsers: number | null;
 }) {
+  const isOneSample = result.kind === "oneProportion";
   const durationLine =
     dailyUsers && dailyUsers > 0
-      ? `\n- Estimated duration at ${fmtInt(dailyUsers)} users/day (split 50/50): **${Math.ceil(
-          result.total / dailyUsers,
-        )} days**`
+      ? `\n- Estimated duration at ${fmtInt(dailyUsers)} users/day${
+          isOneSample ? "" : " (split 50/50)"
+        }: **${Math.ceil(result.total / dailyUsers)} days**`
       : "";
+
+  const sizeSection = isOneSample
+    ? `- Sample size: **${fmtInt(result.total)}**${durationLine}`
+    : `- Per group: **${fmtInt(result.perGroup)}**
+- Total: **${fmtInt(result.total)}**${durationLine}`;
 
   const markdown = `# Sample Size
 
-- Per group: **${fmtInt(result.perGroup)}**
-- Total: **${fmtInt(result.total)}**${durationLine}
+${sizeSection}
 
 ## Assumptions
 - α = ${alpha.toFixed(3)} (${twoSided ? "two-sided" : "one-sided"})
@@ -477,23 +568,33 @@ ${Object.entries(inputs)
   .join("\n")}
 `;
 
+  const summary = isOneSample
+    ? `n=${result.total} at α=${alpha}, power=${power}`
+    : `n=${result.perGroup}/group (${result.total} total) at α=${alpha}, power=${power}`;
+
   return (
     <Detail
       markdown={markdown}
       actions={
         <ActionPanel>
-          <Action.CopyToClipboard
-            title="Copy Per-Group N"
-            content={String(result.perGroup)}
-          />
-          <Action.CopyToClipboard
-            title="Copy Total N"
-            content={String(result.total)}
-          />
-          <Action.CopyToClipboard
-            title="Copy Summary"
-            content={`n=${result.perGroup}/group (${result.total} total) at α=${alpha}, power=${power}`}
-          />
+          {isOneSample ? (
+            <Action.CopyToClipboard
+              title="Copy Sample Size"
+              content={String(result.total)}
+            />
+          ) : (
+            <>
+              <Action.CopyToClipboard
+                title="Copy Per-Group N"
+                content={String(result.perGroup)}
+              />
+              <Action.CopyToClipboard
+                title="Copy Total N"
+                content={String(result.total)}
+              />
+            </>
+          )}
+          <Action.CopyToClipboard title="Copy Summary" content={summary} />
         </ActionPanel>
       }
     />

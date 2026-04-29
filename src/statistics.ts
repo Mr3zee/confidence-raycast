@@ -142,6 +142,15 @@ export function tInv(p: number, df: number): number {
   return (lo + hi) / 2;
 }
 
+export type TestKind = "oneProportion" | "twoProportion" | "means";
+
+export type OneProportionInput = {
+  successes: number;
+  trials: number;
+  nullProportion: number;
+  confidenceLevel: number;
+};
+
 export type ProportionInput = {
   successesA: number;
   trialsA: number;
@@ -161,6 +170,7 @@ export type MeansInput = {
 };
 
 export type Result = {
+  kind: TestKind;
   diff: number;
   diffRelative: number | null;
   ciLow: number;
@@ -174,6 +184,44 @@ export type Result = {
   rateA?: number;
   rateB?: number;
 };
+
+export function oneProportionTest(input: OneProportionInput): Result {
+  const { successes, trials, nullProportion, confidenceLevel } = input;
+  if (trials <= 0) throw new Error("Trial count must be greater than zero.");
+  if (successes < 0) throw new Error("Successes cannot be negative.");
+  if (successes > trials) throw new Error("Successes cannot exceed trials.");
+  if (nullProportion <= 0 || nullProportion >= 1)
+    throw new Error("Null proportion must be between 0 and 1.");
+  if (confidenceLevel <= 0 || confidenceLevel >= 100)
+    throw new Error("Confidence level must be between 0 and 100.");
+
+  const pHat = successes / trials;
+  const diff = pHat - nullProportion;
+
+  const seNull = Math.sqrt((nullProportion * (1 - nullProportion)) / trials);
+  const z = seNull === 0 ? 0 : diff / seNull;
+  const pValue = 2 * (1 - normalCdf(Math.abs(z)));
+
+  const alpha = 1 - confidenceLevel / 100;
+  const zCrit = normalInv(1 - alpha / 2);
+  const seWald = Math.sqrt((pHat * (1 - pHat)) / trials);
+  const margin = zCrit * seWald;
+
+  return {
+    kind: "oneProportion",
+    diff,
+    diffRelative: nullProportion === 0 ? null : diff / nullProportion,
+    ciLow: pHat - margin,
+    ciHigh: pHat + margin,
+    pValue,
+    statistic: z,
+    statisticName: "z",
+    significant: pValue < alpha,
+    alpha,
+    rateA: pHat,
+    rateB: nullProportion,
+  };
+}
 
 export function twoProportionTest(input: ProportionInput): Result {
   const { successesA, trialsA, successesB, trialsB, confidenceLevel } = input;
@@ -205,6 +253,7 @@ export function twoProportionTest(input: ProportionInput): Result {
   const margin = zCrit * seUnpooled;
 
   return {
+    kind: "twoProportion",
     diff,
     diffRelative: pA === 0 ? null : diff / pA,
     ciLow: diff - margin,
@@ -237,7 +286,17 @@ export type MeansSampleSizeInput = {
   twoSided: boolean;
 };
 
+export type OneProportionSampleSizeInput = {
+  baseline: number;
+  mde: number;
+  mdeType: "absolute" | "relative";
+  alpha: number;
+  power: number;
+  twoSided: boolean;
+};
+
 export type SampleSizeResult = {
+  kind: TestKind;
   perGroup: number;
   total: number;
   p1?: number;
@@ -246,6 +305,46 @@ export type SampleSizeResult = {
   zAlpha: number;
   zBeta: number;
 };
+
+export function sampleSizeOneProportion(
+  input: OneProportionSampleSizeInput,
+): SampleSizeResult {
+  const { baseline, mde, mdeType, alpha, power, twoSided } = input;
+  if (baseline <= 0 || baseline >= 1)
+    throw new Error("Baseline rate must be between 0 and 1.");
+  if (alpha <= 0 || alpha >= 1)
+    throw new Error("Alpha must be between 0 and 1.");
+  if (power <= 0 || power >= 1)
+    throw new Error("Power must be between 0 and 1.");
+  if (mde === 0) throw new Error("MDE must be non-zero.");
+
+  const p0 = baseline;
+  const p1 = mdeType === "relative" ? baseline * (1 + mde) : baseline + mde;
+  if (p1 <= 0 || p1 >= 1)
+    throw new Error(
+      "MDE produces an invalid alternative rate (must stay between 0 and 1).",
+    );
+
+  const delta = p1 - p0;
+  const zAlpha = twoSided ? normalInv(1 - alpha / 2) : normalInv(1 - alpha);
+  const zBeta = normalInv(power);
+
+  const term1 = zAlpha * Math.sqrt(p0 * (1 - p0));
+  const term2 = zBeta * Math.sqrt(p1 * (1 - p1));
+  const n = Math.pow(term1 + term2, 2) / Math.pow(delta, 2);
+  const perGroup = Math.ceil(n);
+
+  return {
+    kind: "oneProportion",
+    perGroup,
+    total: perGroup,
+    p1: p0,
+    p2: p1,
+    absoluteMde: delta,
+    zAlpha,
+    zBeta,
+  };
+}
 
 export function sampleSizeProportion(
   input: ProportionSampleSizeInput,
@@ -277,6 +376,7 @@ export function sampleSizeProportion(
   const perGroup = Math.ceil(n);
 
   return {
+    kind: "twoProportion",
     perGroup,
     total: perGroup * 2,
     p1,
@@ -304,6 +404,7 @@ export function sampleSizeMeans(input: MeansSampleSizeInput): SampleSizeResult {
   const perGroup = Math.ceil(n);
 
   return {
+    kind: "means",
     perGroup,
     total: perGroup * 2,
     absoluteMde: mde,
@@ -337,6 +438,7 @@ export function welchTTest(input: MeansInput): Result {
   const margin = tCrit * se;
 
   return {
+    kind: "means",
     diff,
     diffRelative: meanA === 0 ? null : diff / meanA,
     ciLow: diff - margin,

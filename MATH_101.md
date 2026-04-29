@@ -70,19 +70,56 @@ Bisection on `tCdf` over `[−10⁶, 10⁶]`, stopping at width `< 10⁻⁹`. Sl
 
 ---
 
-## 3. Two-Proportion z-Test — `twoProportionTest`
+## 3. One-Proportion z-Test — `oneProportionTest`
+
+Used when you have a single Bernoulli sample and want to compare it against a fixed, known rate `p₀` — the SLA you're supposed to hit, last quarter's conversion rate, the textbook prevalence.
+
+Inputs: successes `x`, trials `n`, null proportion `p₀`, confidence level `(1−α)·100%`.
+
+### 3.1 Point estimate
+
+$$
+\hat p = \tfrac{x}{n},\qquad \widehat{\Delta} = \hat p - p_0
+$$
+
+### 3.2 P-value: SE under H₀
+
+Under H₀ the rate is *exactly* `p₀`, so the variance is fixed (no need to estimate it from the sample):
+
+$$
+\mathrm{SE}_0 = \sqrt{\tfrac{p_0\,(1-p_0)}{n}},\qquad
+z = \tfrac{\hat p - p_0}{\mathrm{SE}_0},\qquad
+p\text{-value} = 2\bigl(1 - \Phi(|z|)\bigr)
+$$
+
+### 3.3 Confidence interval (Wald)
+
+The CI here estimates the *true rate `p`*, not the deviation. We use the data — not the null — to estimate variance:
+
+$$
+\mathrm{SE} = \sqrt{\tfrac{\hat p\,(1-\hat p)}{n}},\qquad
+\mathrm{CI} = \hat p \pm z_{1-\alpha/2}\cdot \mathrm{SE}
+$$
+
+> **Wald vs. Wilson.** The Wald interval can perform poorly for very small `n` or `p̂` near 0/1; in those regimes the **Wilson** or **Agresti–Coull** intervals are more accurate. We use Wald to match the parallel construction in the two-proportion test; for `n·p̂ ≥ 10` and `n·(1−p̂) ≥ 10` it's fine.
+
+> **Why two SEs?** Same reason as the two-proportion case: the p-value answers a question about `H₀` (so use `p₀` in the SE), the CI answers a question about the truth (so use `p̂`).
+
+---
+
+## 4. Two-Proportion z-Test — `twoProportionTest`
 
 Used when each unit is a Bernoulli outcome: converted/not, churned/not.
 
 Inputs: `xA, nA, xB, nB`, confidence level `(1−α)·100%`.
 
-### 3.1 Point estimates
+### 4.1 Point estimates
 
 $$
 \hat p_A = \tfrac{x_A}{n_A},\quad \hat p_B = \tfrac{x_B}{n_B},\quad \widehat{\Delta} = \hat p_B - \hat p_A
 $$
 
-### 3.2 P-value: pooled SE under H₀
+### 4.2 P-value: pooled SE under H₀
 
 Under H₀ both groups share one rate, so we pool:
 
@@ -96,7 +133,7 @@ z = \tfrac{\widehat{\Delta}}{\mathrm{SE}_0},\qquad
 p\text{-value} = 2\bigl(1 - \Phi(|z|)\bigr)
 $$
 
-### 3.3 Confidence interval: unpooled SE
+### 4.3 Confidence interval: unpooled SE
 
 For the CI we *don't* assume H₀ — we estimate each variance separately:
 
@@ -113,20 +150,20 @@ $$
 
 ---
 
-## 4. Welch's Two-Sample t-Test — `welchTTest`
+## 5. Welch's Two-Sample t-Test — `welchTTest`
 
 Used when the metric is continuous (revenue per user, days-to-churn, session length) and variances may differ.
 
 Inputs: means `m_A, m_B`, std devs `s_A, s_B`, sample sizes `n_A, n_B`.
 
-### 4.1 Test statistic
+### 5.1 Test statistic
 
 $$
 \mathrm{SE} = \sqrt{\tfrac{s_A^2}{n_A} + \tfrac{s_B^2}{n_B}},\qquad
 t = \tfrac{m_B - m_A}{\mathrm{SE}}
 $$
 
-### 4.2 Welch–Satterthwaite degrees of freedom
+### 5.2 Welch–Satterthwaite degrees of freedom
 
 $$
 \nu = \frac{\bigl(s_A^2/n_A + s_B^2/n_B\bigr)^{2}}
@@ -135,7 +172,7 @@ $$
 
 (generally non-integer, that's expected).
 
-### 4.3 P-value & CI
+### 5.3 P-value & CI
 
 $$
 p\text{-value} = 2\bigl(1 - T_\nu(|t|)\bigr),\qquad
@@ -144,11 +181,38 @@ $$
 
 ---
 
-## 5. Sample Size for a Two-Proportion Test — `sampleSizeProportion`
+## 6. Sample Size for a One-Proportion Test — `sampleSizeOneProportion`
+
+Inputs: null proportion `p₀`, MDE (relative or absolute) → alternative `p₁`, α, power `1−β`, one/two-sided.
+
+### 6.1 MDE conversion
+
+$$
+p_1 = \begin{cases}
+p_0\,(1 + \mathrm{MDE}) & \text{if relative} \\
+p_0 + \mathrm{MDE} & \text{if absolute}
+\end{cases}
+$$
+
+with the constraint `0 < p₁ < 1`.
+
+### 6.2 Sample size
+
+We want the one-sample z-test (with SE evaluated under H₀) to reject with probability `1 − β` when the truth is `p₁`:
+
+$$
+n = \frac{\Bigl(z_{1-\alpha/2}\sqrt{p_0\,(1-p_0)} + z_{1-\beta}\sqrt{p_1\,(1-p_1)}\Bigr)^{2}}{(p_1 - p_0)^2}
+$$
+
+We `Math.ceil`. Unlike the two-sample formulas there's only one group, so `total = n`. For one-sided tests, replace `z_{1-α/2}` with `z_{1-α}`.
+
+---
+
+## 7. Sample Size for a Two-Proportion Test — `sampleSizeProportion`
 
 Inputs: baseline `p₁`, MDE (relative or absolute) → `p₂`, α, power `1−β`, one/two-sided.
 
-### 5.1 MDE conversion
+### 7.1 MDE conversion
 
 $$
 p_2 = \begin{cases}
@@ -159,7 +223,7 @@ $$
 
 with the constraint `0 < p₂ < 1`.
 
-### 5.2 Per-group sample size
+### 7.2 Per-group sample size
 
 We need the test (under H₀, pooled variance) to reject with probability `1 − β` when the truth is `(p₁, p₂)`:
 
@@ -173,7 +237,7 @@ where `q = 1 − p`, `p̄ = (p₁ + p₂)/2`, `q̄ = 1 − p̄`. We `Math.ceil` 
 
 ---
 
-## 6. Sample Size for a Two-Sample Means Test — `sampleSizeMeans`
+## 8. Sample Size for a Two-Sample Means Test — `sampleSizeMeans`
 
 Inputs: `s_A, s_B` (treatment defaults to control), absolute MDE `Δ`, α, power.
 
@@ -185,7 +249,7 @@ This is the **z-approximation** to the t-based formula — fine for `n ≳ 30` p
 
 ---
 
-## 7. Worked Example — Churn (used in this README's docs)
+## 9. Worked Example — Churn (used in this README's docs)
 
 - Control: 96 / 1,200 → `p̂_A = 0.080`
 - Treatment: 75 / 1,250 → `p̂_B = 0.060`
@@ -207,7 +271,7 @@ per group — i.e., the experiment above (~1,200 + 1,250) was simply underpowere
 
 ---
 
-## 8. Assumptions & Failure Modes
+## 10. Assumptions & Failure Modes
 
 - **Independence.** All formulas assume one observation = one independent unit. Multi-seat accounts, repeat sessions per user, or network effects break this and inflate apparent significance. Aggregate to the user/account level first.
 - **Normal approximation for proportions.** The z-test is reliable when `n·p ≥ 10` *and* `n·(1−p) ≥ 10` for both groups. For very rare events use Fisher's exact instead.
