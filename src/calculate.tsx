@@ -102,9 +102,9 @@ export default function Command() {
         const alpha = parsePercent(values.alpha, "Alpha");
         const power = parsePercent(values.power, "Power");
         const twoSided = values.tail !== "one";
-        const dailyUsers =
-          values.dailyUsers && values.dailyUsers.trim() !== ""
-            ? parseNumber(values.dailyUsers, "Daily users")
+        const dailyThroughput =
+          values.dailyThroughput && values.dailyThroughput.trim() !== ""
+            ? parseNumber(values.dailyThroughput, "Daily throughput")
             : null;
 
         let result: SampleSizeResult;
@@ -161,7 +161,7 @@ export default function Command() {
             power={power}
             twoSided={twoSided}
             inputs={inputs}
-            dailyUsers={dailyUsers}
+            dailyThroughput={dailyThroughput}
           />,
         );
       }
@@ -218,7 +218,7 @@ export default function Command() {
         />
         <Form.Dropdown.Item
           value="proportion"
-          title="Two-Proportion (Conversion / Churn)"
+          title="Two-Proportion (Two Rates)"
         />
         <Form.Dropdown.Item
           value="means"
@@ -329,9 +329,9 @@ export default function Command() {
             <Form.Dropdown.Item value="one" title="One-sided" />
           </Form.Dropdown>
           <Form.TextField
-            id="dailyUsers"
-            title="Daily Users (optional)"
-            placeholder="e.g. 2000 — used to estimate test duration"
+            id="dailyThroughput"
+            title="Daily Throughput (optional)"
+            placeholder="e.g. 2000 observations/day — used to estimate test duration"
           />
           <Form.Separator />
           {testType === "oneProportion" || testType === "proportion" ? (
@@ -346,7 +346,7 @@ export default function Command() {
                 placeholder={
                   testType === "oneProportion"
                     ? "e.g. 8 for 8% hypothesized rate"
-                    : "e.g. 8 for 8% churn"
+                    : "e.g. 8 for 8% baseline rate"
                 }
               />
               <Form.Dropdown
@@ -531,21 +531,21 @@ function PlanResultView({
   power,
   twoSided,
   inputs,
-  dailyUsers,
+  dailyThroughput,
 }: {
   result: SampleSizeResult;
   alpha: number;
   power: number;
   twoSided: boolean;
   inputs: Record<string, string>;
-  dailyUsers: number | null;
+  dailyThroughput: number | null;
 }) {
   const isOneSample = result.kind === "oneProportion";
   const durationLine =
-    dailyUsers && dailyUsers > 0
-      ? `\n- Estimated duration at ${fmtInt(dailyUsers)} users/day${
+    dailyThroughput && dailyThroughput > 0
+      ? `\n- Estimated duration at ${fmtInt(dailyThroughput)} obs/day${
           isOneSample ? "" : " (split 50/50)"
-        }: **${Math.ceil(result.total / dailyUsers)} days**`
+        }: **${Math.ceil(result.total / dailyThroughput)} days**`
       : "";
 
   const sizeSection = isOneSample

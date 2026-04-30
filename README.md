@@ -1,19 +1,19 @@
 # Confidence
 
-Raycast extension for A/B-test statistics: confidence intervals, p-values, and sample-size planning.
+Raycast extension for frequentist statistics: confidence intervals, p-values, and sample-size planning.
 
 ## Features
 
-- **Analyze results** — one-proportion z-test (single rate vs hypothesized target), two-proportion z-test (conversion / churn), or Welch's two-sample t-test (continuous metrics).
-- **Plan sample size** — required `n` for one- or two-sample tests given baseline, MDE (relative or absolute), α, and power. Optional daily-users field estimates test duration.
+- **Analyze results** — one-proportion z-test (single rate vs hypothesized target), two-proportion z-test (two rates), or Welch's two-sample t-test (continuous metrics).
+- **Plan sample size** — required `n` for one- or two-sample tests given baseline, MDE (relative or absolute), α, and power. Optional daily-throughput field estimates test duration.
 - **Formula reference** — opens `MATH_101.md` fully rendered, with every LaTeX expression converted to SVG via MathJax at runtime and cached on disk. Trigger with `⌘R` from the form.
 
 ## Use cases
 
-- A/B tests on conversion rate, churn rate, click-through rate, retention.
-- Single-sample checks: "is our observed conversion rate significantly different from the 8% SLA?"
-- Continuous metrics: revenue per user, days-to-churn, session length.
-- Pre-experiment sizing: "how many users do I need to detect a 10% relative reduction in churn?"
+- Comparing two rates between groups (success/failure outcomes).
+- Single-sample checks: "is the observed rate significantly different from a hypothesized target?"
+- Continuous metrics: any per-unit numeric value with a mean and standard deviation.
+- Pre-experiment sizing: "how many observations do I need to detect a 10% relative change?"
 
 ## Math
 

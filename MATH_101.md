@@ -78,7 +78,7 @@ We use bisection on `tCdf` over `[−10⁶, 10⁶]`, stopping at a width `< 10�
 
 ## 3. One-Proportion z-Test — `oneProportionTest`
 
-Used when you have a single Bernoulli sample and want to compare it against a fixed, known rate `p₀`—such as an SLA you are supposed to hit, last quarter's conversion rate, or textbook prevalence.
+Used when you have a single Bernoulli sample and want to compare it against a fixed, known rate `p₀`—such as an SLA you are supposed to hit, a previously measured rate, or textbook prevalence.
 
 Inputs: successes `x`, trials `n`, null proportion `p₀`, and confidence level `(1−α)·100%`.
 
@@ -124,7 +124,7 @@ The CI sits entirely below `0.95`; you are confidently missing the SLA.
 
 ## 4. Two-Proportion z-Test — `twoProportionTest`
 
-Used when each unit is a Bernoulli outcome: converted/not, churned/not.
+Used when each unit is a Bernoulli outcome (success/failure) and you want to compare the rate between two groups.
 
 Inputs: `xA, nA, xB, nB`, and confidence level `(1−α)·100%`.
 
@@ -160,10 +160,10 @@ $$
 
 > **Why two SEs?** The pooled form is the right model under `H₀` (the question the p-value answers). The unpooled form is the right estimate of the *actual* difference (the question the CI answers). This is standard practice and matches tools like Evan Miller and Optimizely.
 
-### 4.4 Worked example — churn experiment
+### 4.4 Worked example — comparing two rates
 
-* Control: `96 / 1,200` → `p̂_A = 0.080`
-* Treatment: `75 / 1,250` → `p̂_B = 0.060`
+* Group A: `96 / 1,200` → `p̂_A = 0.080`
+* Group B: `75 / 1,250` → `p̂_B = 0.060`
 * `Δ̂ = −0.020` absolute, ≈ −25% relative
 
 Pooled: `p̂ = 171/2450 ≈ 0.0698`, `SE₀ ≈ 0.01030`, `z ≈ −1.942`, `p ≈ 0.052`.
@@ -176,7 +176,7 @@ So at `α = 0.05`, the result is right on the line (`p` is just above 0.05; CI j
 
 ## 5. Welch's Two-Sample t-Test — `welchTTest`
 
-Used when the metric is continuous (e.g., revenue per user, days-to-churn, session length) and variances may differ.
+Used when the metric is continuous (any per-unit numeric value) and variances may differ between the two groups.
 
 Inputs: means `m_A, m_B`, standard deviations `s_A, s_B`, and sample sizes `n_A, n_B`.
 
@@ -200,12 +200,12 @@ $$
 p\text{-value} = 2\bigl(1 - T_\nu(|t|)\bigr),\qquad \mathrm{CI} = (m_B - m_A) \pm t_{1-\alpha/2,\,\nu}\cdot \mathrm{SE}
 $$
 
-### 5.4 Worked example — revenue per user
+### 5.4 Worked example — comparing two means
 
-Checkout test on average revenue per user:
+Two groups with a continuous outcome:
 
-* Control: `n_A = 500`, `m_A = 100.00`, `s_A = 30.00`
-* Treatment: `n_B = 500`, `m_B = 105.00`, `s_B = 32.00`
+* Group A: `n_A = 500`, `m_A = 100.00`, `s_A = 30.00`
+* Group B: `n_B = 500`, `m_B = 105.00`, `s_B = 32.00`
 
 Compute:
 
@@ -279,9 +279,9 @@ Where `q = 1 − p`, `p̄ = (p₁ + p₂)/2`, and `q̄ = 1 − p̄`. We `Math.ce
 
 > **Intuition:** Numerator: how strict the gate is (`z_α`) plus how confidently you want to clear it (`z_β`), each weighted by the relevant variance. Denominator: the squared signal you are trying to find. Bigger signal → smaller `n`. Tighter `α` or higher power → bigger `n`.
 
-### 7.3 Worked example — powering the churn re-run
+### 7.3 Worked example — powering a re-run
 
-Continuing the §4 churn example: you observed `p̂_A ≈ 0.080`, `p̂_B ≈ 0.060`, and want to plan a powered re-run aimed at a 10%-relative MDE (`8% → 7.2%`, two-sided, `α=0.05`, `power=0.80`):
+Continuing the §4 example: you observed `p̂_A ≈ 0.080`, `p̂_B ≈ 0.060`, and want to plan a powered re-run aimed at a 10%-relative MDE (`8% → 7.2%`, two-sided, `α=0.05`, `power=0.80`):
 
 * `p̄ = 0.076`, `q̄ = 0.924`, so `2 p̄ q̄ ≈ 0.14045`
 * `p₁q₁ + p₂q₂ = 0.0736 + 0.06682 ≈ 0.14042`
@@ -306,20 +306,20 @@ We use `Math.ceil` and report `total = 2n`. For one-sided tests, replace `z_{1-�
 
 This is the **z-approximation** to the t-based formula—fine for `n ≳ 30` per group. For very small expected `n`, you would iterate using `t_{1-α/2,\,ν(n)}`, but planning calculators almost universally stop at the z-form.
 
-### 8.1 Worked example — powering a revenue test
+### 8.1 Worked example — powering a means test
 
-Detect a `$1` lift in revenue per user with `s_A = s_B = $25`, `α=0.05`, `power=0.80`:
+Detect a difference of `1` unit between two groups with `s_A = s_B = 25`, `α=0.05`, `power=0.80`:
 
 * `(z_{0.975} + z_{0.80})² = (1.95996 + 0.84162)² ≈ 7.849`
 * `n = 7.849·(625 + 625) / 1² ≈ 9,812`
 
-That's ~9,812 per group, ~19,624 total. Doubling the MDE to `$2` cuts `n` by 4× (it's in the denominator squared) → ~2,453 per group.
+That's ~9,812 per group, ~19,624 total. Doubling the MDE to `2` cuts `n` by 4× (it's in the denominator squared) → ~2,453 per group.
 
 ---
 
 ## 9. Assumptions & Failure Modes
 
-* **Independence:** All formulas assume one observation equals one independent unit. Multi-seat accounts, repeat sessions per user, or network effects break this and inflate apparent significance. Aggregate to the user/account level first.
+* **Independence:** All formulas assume one observation equals one independent unit. Repeated measurements on the same unit, clustering, or network effects break this and inflate apparent significance. Aggregate to the independent-unit level first.
 * **Normal approximation for proportions:** The z-test is reliable when `n·p ≥ 10` *and* `n·(1−p) ≥ 10` for both groups. For very rare events, use Fisher's exact test instead.
 * **Equal allocation:** Sample-size formulas above assume 50/50 splits. Unequal splits inflate total `n`; multiply by `(1 + k)² / (4k)` where `k = n_B/n_A`.
 * **Two-sided by default:** One-sided tests reduce required sample size by ~20% (at `α=0.05, β=0.20`) — but only if you would genuinely never act on a result in the other direction, which is rarely true in practice.
